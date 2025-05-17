@@ -27,9 +27,6 @@ public class CryptoService {
     public Map<String, Double> getCurrentPrices() throws Exception {
         Map<String, Double> prices = new HashMap<>();
 
-        //should not be a problem to push on github since it's not an API key
-        //can only get probably one coin price at a time
-        //TODO in the ui the must be a way to choose which coin the user wants to know the price of
         String coinIds = String.join(",", coinIdToSymbol.keySet());
         JSONObject json = getJsonObject();
 
@@ -47,6 +44,10 @@ public class CryptoService {
     }
 
     private static JSONObject getJsonObject() throws IOException {
+        //should not be a problem to push on github since it's not an API key
+        //can only get probably one coin price at a time, so TODO find a better faster free way to fetch the prices
+        //TODO in the ui the must be a way to choose which coin the user wants to know the price of
+        //TODO modify to get the coin specified by user.
         String apiUrl = "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd";
 
         URL url = new URL(apiUrl);

@@ -2,6 +2,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+//TODO implement a way to add transactions
 public class Account {
     private double balance;
     private final List<Transaction> transactions;
