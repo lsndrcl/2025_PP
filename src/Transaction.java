@@ -35,4 +35,12 @@ public class Transaction {
     public String getDescription() {
         return description;
     }
+
+    @Override
+    public String toString() {
+        return "Transaction{" +
+                "description='" + description + '\'' +
+                ", amount=" + amount +
+                '}';
+    }
 }

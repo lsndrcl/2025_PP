@@ -1,13 +1,22 @@
+/**
+ * Represents a user in the crypto trading system with associated account and portfolio.
+ */
 public class User {
     private String username;
     private String passwordHash;
     private Account account;
     private Portfolio portfolio;
 
-    public User() {
-        // Needed for Jackson deserialization
-    }
+    /**
+     * Default constructor needed for JSON deserialization.
+     */
+    public User() {}
 
+    /**
+     * Creates a user with the specified credentials and initializes their account and portfolio.
+     * @param username The user's username
+     * @param passwordHash The hashed password
+     */
     public User(String username, String passwordHash) {
         this.username = username;
         this.passwordHash = passwordHash;
