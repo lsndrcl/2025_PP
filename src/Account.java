@@ -2,7 +2,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-//TODO implement a way to add transactions
+//TODO implement a way to add transactions, should be imported with json file or by direct function
 public class Account {
     private double balance;
     private final List<Transaction> transactions;
