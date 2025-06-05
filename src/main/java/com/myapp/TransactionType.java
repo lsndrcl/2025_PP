@@ -1,3 +1,5 @@
+package com.myapp;
+
 public enum TransactionType {
     DEPOSIT,
     WITHDRAWAL,

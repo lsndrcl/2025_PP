@@ -1,14 +1,17 @@
+package com.myapp;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.util.*;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
 /**
- * A service class that interacts with the CoinGecko API to fetch current and historical cryptocurrency prices.
+ * Provides cryptocurrency-related services such as price data retrieval and analysis.
  */
 public class CryptoService {
 
@@ -98,7 +101,7 @@ public class CryptoService {
 
     // Helper to fetch and parse JSON from a URL
     private JSONObject fetchJsonFromUrl(String urlString) throws IOException {
-        URL url = new URL(urlString);
+        URL url = URI.create(urlString).toURL();
         HttpURLConnection con = (HttpURLConnection) url.openConnection();
         con.setRequestMethod("GET");
 

@@ -1,3 +1,5 @@
+package com.myapp;
+
 import weka.classifiers.meta.FilteredClassifier;
 import weka.classifiers.trees.RandomForest;
 import weka.core.Instance;

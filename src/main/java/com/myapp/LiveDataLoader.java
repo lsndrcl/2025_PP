@@ -1,3 +1,5 @@
+package com.myapp;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
 import weka.core.Attribute;
@@ -7,7 +9,7 @@ import weka.core.Instances;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
-import java.net.URL;
+import java.net.URI;
 import java.util.ArrayList;
 
 /**
@@ -37,7 +39,7 @@ public class LiveDataLoader {
                 "https://api.coingecko.com/api/v3/coins/%s/market_chart?vs_currency=usd&days=%d&interval=daily",
                 coinId, days);
 
-        HttpURLConnection con = (HttpURLConnection) new URL(urlStr).openConnection();
+        HttpURLConnection con = (HttpURLConnection) URI.create(urlStr).toURL().openConnection();
         con.setRequestMethod("GET");
         con.setRequestProperty("User-Agent", "Mozilla/5.0");
 

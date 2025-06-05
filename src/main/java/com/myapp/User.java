@@ -1,3 +1,5 @@
+package com.myapp;
+
 /**
  * Represents a user in the crypto trading system with associated account and portfolio.
  */
