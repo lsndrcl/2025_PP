@@ -69,7 +69,7 @@ public class Account {
 
     /**
      * Searches transactions using a custom filter.
-     * @param filter A TransactionFilter predicate
+     * @param filter A com.myapp.UI.TransactionFilter predicate
      * @return List of matching transactions
      */
     public List<Transaction> searchTransactions(TransactionFilter filter) {
