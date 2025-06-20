@@ -31,11 +31,21 @@ This application helps users manage their finances and make informed cryptocurre
 - Fetch current cryptocurrency prices
 - Retrieve historical price data
 - Support for 10+ major cryptocurrencies (BTC, ETH, etc.)
+- Data caching system to reduce API calls and improve performance
 
 ### Analysis & Prediction
 - Machine learning models for price prediction
 - Technical indicators calculation
 - Investment recommendation engine
+- Parallel processing for faster analysis of multiple cryptocurrencies
+
+### User Interface
+- Swing-based graphical user interface
+- Login and registration dialog
+- Account management panel
+- Trading panel with real-time price updates
+- Transaction filtering and searching
+- Portfolio visualization
 
 ## Project Structure
 
@@ -44,7 +54,7 @@ This application helps users manage their finances and make informed cryptocurre
 
 ### Key Components
 
-- `Main` - Main application entry point with console-based UI
+- `Main` - Main application entry point with GUI
 - `User` - Represents a user with account and portfolio
 - `Account` - Manages fiat currency balances and transactions
 - `Portfolio` - Handles cryptocurrency holdings and trading
@@ -53,6 +63,13 @@ This application helps users manage their finances and make informed cryptocurre
 - `CryptoAdvisor` - Offers investment recommendations based on ML analysis
 - `LiveDataLoader` - Retrieves and processes real-time crypto data
 - `UserManager` - Handles user authentication, registration, and data persistence
+
+### UI Components
+- `MainFrame` - Main application window
+- `LoginDialog` - Authentication dialog for login/registration
+- `AccountPanel` - Panel for managing account and transactions
+- `TradingPanel` - Panel for cryptocurrency trading and price analysis
+- `TransactionFilterDialog` - Dialog for filtering transaction history
 
 ## Getting Started
 
@@ -75,7 +92,7 @@ mvn clean install
 
 ### Running the Application
 
-The application provides a console-based user interface:
+The application provides a graphical user interface:
 
 ```bash
 mvn exec:java -Dexec.mainClass="com.myapp.Main"
@@ -95,27 +112,63 @@ java -jar target/JavaBankCryptoProject-1.0-SNAPSHOT-jar-with-dependencies.jar
 
 ## Application Usage
 
-1. When you start the application, you'll see the authentication menu with options to:
+1. When you start the application, you'll see the login dialog with options to:
    - Login with existing credentials
    - Register a new account
-   - Exit the application
 
-2. After logging in, you can:
-   - View account details
-   - Deposit or withdraw funds
-   - View transaction history
-   - View your cryptocurrency portfolio
-   - Trade cryptocurrencies (buy/sell)
-   - Logout or exit the application
+2. After logging in, the main application window opens with tabs for:
+   - Account Management - View balance, deposit/withdraw funds, and manage transactions
+   - Trading - Buy/sell cryptocurrencies and view real-time market data
+   - Portfolio Analysis - View portfolio performance and investment recommendations
+
+3. Features include:
+   - Deposit and withdraw funds from your account
+   - Import and export transaction history as JSON
+   - Filter transactions by type, amount, and date
+   - Buy and sell cryptocurrencies with real-time pricing
+   - Get AI-powered investment recommendations
+   - View current market prices for major cryptocurrencies
+
+## Recent Improvements
+
+### Performance Enhancements
+- Implemented data caching system to reduce API calls
+- Added parallel processing for cryptocurrency analysis
+- Optimized machine learning model training
+- Added cancellation support for long-running operations
+
+### UI Improvements
+- Redesigned trading panel with better price formatting
+- Added transaction filtering capabilities
+- Improved error handling and user feedback
+- Added loading indicators for background operations
+
+### Code Quality
+- Fixed import dependencies and removed unused imports
+- Resolved naming conflicts between packages
+- Added comprehensive test coverage for UI components
+- Improved exception handling and error reporting
 
 ## Testing
 
-The project includes JUnit 5 tests for core components:
+The project includes JUnit 5 tests for all components:
 
-- `UserTest` - Tests for user creation and initialization
-- `AccountTest` - Tests for account operations and transactions
-- `TransactionFilterTest` - Tests for transaction filtering functionality
-- `AccountJsonTest` - Tests for transaction import/export functionality
+- Core functionality tests:
+  - `UserTest` - Tests for user creation and initialization
+  - `AccountTest` - Tests for account operations and transactions
+  - `TransactionFilterTest` - Tests for transaction filtering functionality
+  - `AccountJsonTest` - Tests for transaction import/export functionality
+
+- Crypto functionality tests:
+  - `CryptoServiceTest` - Tests for cryptocurrency data retrieval
+  - `CryptoAdvisorTest` - Tests for investment recommendation engine
+  - `LiveDataLoaderTest` - Tests for data loading and processing
+  - `PortfolioTest` - Tests for portfolio management
+
+- UI component tests:
+  - `LoginDialogTest` - Tests for authentication dialog
+  - `MainFrameTest` - Tests for main application window
+  - `TradingPanelTest` - Tests for trading functionality
 
 ### Running Tests
 
