@@ -13,6 +13,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * CryptoAdvisor provides a recommendation for the most promising cryptocurrency to invest in,
@@ -64,24 +65,41 @@ public class CryptoAdvisor {
      * @throws Exception if model training or data retrieval fails.
      */
     public String recommendCoin() throws Exception {
+        return recommendCoin(new AtomicBoolean(false));
+    }
+    
+    /**
+     * Recommends the best coin to invest in based on predicted price growth,
+     * with support for cancellation.
+     *
+     * @param cancelRequested AtomicBoolean flag that can be set to true to cancel the process
+     * @return The symbol of the recommended coin (e.g., "BTC", "ETH"), or null if cancelled or no data is usable.
+     * @throws Exception if model training or data retrieval fails.
+     */
+    public String recommendCoin(AtomicBoolean cancelRequested) throws Exception {
         LiveDataLoader loader = new LiveDataLoader();
         Map<String, String> coinIdToSymbol = cryptoService.getCoinIdToSymbolMap();
         
         if (useParallelProcessing) {
-            return recommendCoinParallel(loader, coinIdToSymbol);
+            return recommendCoinParallel(loader, coinIdToSymbol, cancelRequested);
         } else {
-            return recommendCoinSequential(loader, coinIdToSymbol);
+            return recommendCoinSequential(loader, coinIdToSymbol, cancelRequested);
         }
     }
     
     /**
      * Sequential implementation of coin recommendation.
      */
-    private String recommendCoinSequential(LiveDataLoader loader, Map<String, String> coinIdToSymbol) throws Exception {
+    private String recommendCoinSequential(LiveDataLoader loader, Map<String, String> coinIdToSymbol, AtomicBoolean cancelRequested) throws Exception {
         String bestCoin = null;
         double bestGrowth = Double.NEGATIVE_INFINITY;
 
         for (Map.Entry<String, String> entry : coinIdToSymbol.entrySet()) {
+            // Check if cancellation was requested
+            if (cancelRequested.get()) {
+                return null;
+            }
+            
             String coinId = entry.getKey();
             String symbol = entry.getValue();
 
@@ -114,13 +132,18 @@ public class CryptoAdvisor {
     /**
      * Parallel implementation of coin recommendation.
      */
-    private String recommendCoinParallel(LiveDataLoader loader, Map<String, String> coinIdToSymbol) throws Exception {
+    private String recommendCoinParallel(LiveDataLoader loader, Map<String, String> coinIdToSymbol, AtomicBoolean cancelRequested) throws Exception {
         ExecutorService executor = Executors.newFixedThreadPool(maxThreads);
         Map<String, Double> growthResults = new ConcurrentHashMap<>();
         
         // Create futures for each coin
         CompletableFuture<?>[] futures = coinIdToSymbol.entrySet().stream()
             .map(entry -> CompletableFuture.runAsync(() -> {
+                // Check if cancellation was requested
+                if (cancelRequested.get()) {
+                    return;
+                }
+                
                 String coinId = entry.getKey();
                 String symbol = entry.getValue();
                 
@@ -142,17 +165,33 @@ public class CryptoAdvisor {
             }, executor))
             .toArray(CompletableFuture[]::new);
         
-        // Wait for all futures to complete
-        CompletableFuture.allOf(futures).join();
+        // Wait for all futures to complete or until cancellation
+        try {
+            for (CompletableFuture<?> future : futures) {
+                if (cancelRequested.get()) {
+                    break;
+                }
+                // Add a small timeout to check cancellation periodically
+                future.get(500, TimeUnit.MILLISECONDS);
+            }
+        } catch (Exception e) {
+            // Timeout is expected for incomplete futures
+            System.err.println("Some futures didn't complete in time: " + e.getMessage());
+        }
         
         // Shutdown the executor
         executor.shutdown();
         try {
-            if (!executor.awaitTermination(30, TimeUnit.SECONDS)) {
+            if (!executor.awaitTermination(5, TimeUnit.SECONDS)) {
                 executor.shutdownNow();
             }
         } catch (InterruptedException e) {
             executor.shutdownNow();
+        }
+        
+        // If cancelled, return null
+        if (cancelRequested.get()) {
+            return null;
         }
         
         // Find the best coin

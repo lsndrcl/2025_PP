@@ -34,6 +34,32 @@ public class Portfolio {
     public Map<String, Double> getHoldings() {
         return new HashMap<>(holdings);
     }
+    
+    /**
+     * Buys a cryptocurrency using fiat from the linked account.
+     * Fetches the current price automatically.
+     * 
+     * @param symbol The crypto symbol (e.g., "BTC")
+     * @param fiatAmount The fiat amount to spend
+     * @return The amount of crypto purchased
+     * @throws Exception if the price cannot be fetched or the transaction fails
+     */
+    public double buyCrypto(String symbol, double fiatAmount) throws Exception {
+        if (fiatAmount <= 0) throw new IllegalArgumentException("Amount must be positive");
+        
+        // Get current price
+        CryptoService service = new CryptoService();
+        double price = service.getCurrentPrices().get(symbol);
+        if (price <= 0) throw new IllegalStateException("Invalid price for " + symbol);
+        
+        // Calculate crypto amount
+        double cryptoAmount = fiatAmount / price;
+        
+        // Execute the purchase
+        buyCrypto(symbol, cryptoAmount, price);
+        
+        return cryptoAmount;
+    }
 
     /**
      * Buys a cryptocurrency using fiat from the linked account.
@@ -50,6 +76,32 @@ public class Portfolio {
         
         // Update holdings
         holdings.put(symbol, holdings.getOrDefault(symbol, 0.0) + amount);
+    }
+    
+    /**
+     * Sells a cryptocurrency, converting to fiat in the linked account.
+     * Fetches the current price automatically.
+     * 
+     * @param symbol The crypto symbol (e.g., "BTC")
+     * @param cryptoAmount The amount of crypto to sell
+     * @return The fiat amount received
+     * @throws Exception if the price cannot be fetched or the transaction fails
+     */
+    public double sellCrypto(String symbol, double cryptoAmount) throws Exception {
+        if (cryptoAmount <= 0) throw new IllegalArgumentException("Amount must be positive");
+        
+        // Get current price
+        CryptoService service = new CryptoService();
+        double price = service.getCurrentPrices().get(symbol);
+        if (price <= 0) throw new IllegalStateException("Invalid price for " + symbol);
+        
+        // Calculate fiat value
+        double fiatValue = cryptoAmount * price;
+        
+        // Execute the sale
+        sellCrypto(symbol, cryptoAmount, price);
+        
+        return fiatValue;
     }
 
     /**
