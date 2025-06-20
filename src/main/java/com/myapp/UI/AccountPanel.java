@@ -123,7 +123,7 @@ public class AccountPanel extends JPanel {
         TransactionFilterDialog dialog = new TransactionFilterDialog(null);
         dialog.setVisible(true);
 
-        TransactionFilter filter = (TransactionFilter) dialog.getFilter();
+        com.myapp.TransactionFilter filter = dialog.getFilter();
         if (filter != null) {
             List<Transaction> filtered = account.searchTransactions(filter);
             refreshTable(filtered);

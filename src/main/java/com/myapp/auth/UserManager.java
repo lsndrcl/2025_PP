@@ -201,8 +201,10 @@ public class UserManager {
                     JSONObject accountJson = userJson.getJSONObject("account");
                     double balance = accountJson.getDouble("balance");
                     
-                    // Set the balance
-                    user.getAccount().deposit(balance, "Initial balance");
+                    // Set the balance - only deposit if positive amount
+                    if (balance > 0) {
+                        user.getAccount().deposit(balance, "Initial balance");
+                    }
                     
                     // Load transactions if available
                     if (accountJson.has("transactionsFile")) {

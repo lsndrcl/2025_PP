@@ -7,10 +7,18 @@ import weka.core.DenseInstance;
 import weka.core.Instances;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URI;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /**
  * LiveDataLoader is responsible for fetching and converting historical cryptocurrency
@@ -24,7 +32,23 @@ import java.util.ArrayList;
  * and constructs labeled instances for supervised learning.
  */
 public class LiveDataLoader {
-
+    // Cache directory
+    private static final String CACHE_DIR = "data/cache";
+    // Cache expiration time in minutes
+    private static final int CACHE_EXPIRATION_MINUTES = 60;
+    // In-memory cache for current session
+    private final Map<String, CacheEntry> memoryCache = new HashMap<>();
+    
+    /**
+     * Constructor that ensures cache directory exists
+     */
+    public LiveDataLoader() {
+        File cacheDir = new File(CACHE_DIR);
+        if (!cacheDir.exists()) {
+            cacheDir.mkdirs();
+        }
+    }
+    
     /**
      * Downloads historical daily price data for a specific coin and converts it into
      * a Weka dataset with engineered features.
@@ -35,6 +59,30 @@ public class LiveDataLoader {
      * @throws Exception if API fails or data is malformed.
      */
     public Instances getHistoricalData(String coinId, int days) throws Exception {
+        // Check memory cache first
+        String cacheKey = coinId + "_" + days;
+        if (memoryCache.containsKey(cacheKey)) {
+            CacheEntry entry = memoryCache.get(cacheKey);
+            if (!entry.isExpired()) {
+                System.out.println("Using memory cache for " + coinId);
+                return entry.getData();
+            }
+        }
+        
+        // Check file cache
+        File cacheFile = new File(CACHE_DIR + "/" + cacheKey + ".json");
+        if (cacheFile.exists() && !isCacheExpired(cacheFile)) {
+            System.out.println("Using file cache for " + coinId);
+            String jsonData = readFromCache(cacheFile);
+            Instances data = processJsonData(jsonData);
+            
+            // Update memory cache
+            memoryCache.put(cacheKey, new CacheEntry(data));
+            
+            return data;
+        }
+        
+        // If not in cache, fetch from API
         String urlStr = String.format(
                 "https://api.coingecko.com/api/v3/coins/%s/market_chart?vs_currency=usd&days=%d&interval=daily",
                 coinId, days);
@@ -60,8 +108,24 @@ public class LiveDataLoader {
         String line;
         while ((line = reader.readLine()) != null) jsonText.append(line);
         reader.close();
-
-        JSONObject json = new JSONObject(jsonText.toString());
+        
+        // Save to cache
+        writeToCache(cacheFile, jsonText.toString());
+        
+        // Process the data
+        Instances data = processJsonData(jsonText.toString());
+        
+        // Update memory cache
+        memoryCache.put(cacheKey, new CacheEntry(data));
+        
+        return data;
+    }
+    
+    /**
+     * Process JSON data into Weka Instances
+     */
+    private Instances processJsonData(String jsonData) {
+        JSONObject json = new JSONObject(jsonData);
         JSONArray prices = json.getJSONArray("prices");
 
         // Define attributes (features + target)
@@ -114,5 +178,60 @@ public class LiveDataLoader {
         }
 
         return data;
+    }
+    
+    /**
+     * Check if cache file is expired
+     */
+    private boolean isCacheExpired(File cacheFile) {
+        long lastModified = cacheFile.lastModified();
+        long currentTime = System.currentTimeMillis();
+        long expirationTime = TimeUnit.MINUTES.toMillis(CACHE_EXPIRATION_MINUTES);
+        
+        return (currentTime - lastModified) > expirationTime;
+    }
+    
+    /**
+     * Read data from cache file
+     */
+    private String readFromCache(File cacheFile) throws Exception {
+        StringBuilder content = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new FileReader(cacheFile))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                content.append(line);
+            }
+        }
+        return content.toString();
+    }
+    
+    /**
+     * Write data to cache file
+     */
+    private void writeToCache(File cacheFile, String data) throws Exception {
+        try (FileWriter writer = new FileWriter(cacheFile)) {
+            writer.write(data);
+        }
+    }
+    
+    /**
+     * Cache entry with timestamp for in-memory cache
+     */
+    private static class CacheEntry {
+        private final Instances data;
+        private final LocalDateTime timestamp;
+        
+        public CacheEntry(Instances data) {
+            this.data = data;
+            this.timestamp = LocalDateTime.now();
+        }
+        
+        public Instances getData() {
+            return data;
+        }
+        
+        public boolean isExpired() {
+            return LocalDateTime.now().minusMinutes(CACHE_EXPIRATION_MINUTES).isAfter(timestamp);
+        }
     }
 }

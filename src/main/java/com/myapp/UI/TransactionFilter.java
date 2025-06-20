@@ -5,13 +5,14 @@ import com.myapp.TransactionType;
 
 import java.time.LocalDateTime;
 
-public class TransactionFilter {
+public class TransactionFilter implements com.myapp.TransactionFilter {
     private LocalDateTime fromDate;
     private LocalDateTime toDate;
     private TransactionType type;
     private Double minAmount;
     private Double maxAmount;
 
+    @Override
     public boolean matches(Transaction tx) {
         if (fromDate != null && tx.getTimestamp().isBefore(fromDate)) return false;
         if (toDate != null && tx.getTimestamp().isAfter(toDate)) return false;
