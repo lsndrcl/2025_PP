@@ -149,6 +149,64 @@ java -jar target/JavaBankCryptoProject-1.0-SNAPSHOT-jar-with-dependencies.jar
 - Added comprehensive test coverage for UI components
 - Improved exception handling and error reporting
 
+## AI Coin Recommender System
+
+The application features an advanced AI-powered cryptocurrency recommendation system that analyzes market data to suggest the most promising investment opportunities.
+
+### How It Works
+
+1. **Data Collection**:
+   - The `CryptoAdvisor` class fetches historical price data (typically 14 days) for multiple cryptocurrencies
+   - Data is retrieved from the CoinGecko API through the `LiveDataLoader` component
+   - Supports analysis of 10+ major cryptocurrencies including BTC, ETH, ADA, SOL, XRP, etc.
+
+2. **Feature Engineering**:
+   - For each cryptocurrency, the system calculates several technical indicators:
+     - Previous day's price
+     - 3-day moving average
+     - 7-day moving average
+     - 3-day volatility (standard deviation)
+   - These features are used to train the machine learning model
+
+3. **Machine Learning Model**:
+   - Uses Weka's RandomForest algorithm for regression analysis
+   - Each cryptocurrency gets its own trained model
+   - Models are trained in real-time when recommendations are requested
+   - Standardization is applied to normalize input features
+
+4. **Prediction Process**:
+   - The model predicts the next-day price for each cryptocurrency
+   - Growth rate is calculated as: (predicted_price - current_price) / current_price
+   - The cryptocurrency with the highest predicted growth rate is recommended
+
+### Optimizations
+
+1. **Multi-level Caching System**:
+   - **File-based Cache**: Raw market data is stored in JSON files in the `data/cache` directory
+     - Current prices cache expires after 15 minutes
+     - Historical data cache expires after 60 minutes
+     - Individual cryptocurrency data is cached separately
+   - **Memory Cache**: Processed data (Weka Instances) is cached in memory
+     - Avoids redundant processing of the same data within a session
+     - Automatically expires based on configurable timeouts
+
+2. **Parallel Processing**:
+   - Multiple cryptocurrencies are analyzed simultaneously using Java's ExecutorService
+   - Thread pool size is optimized based on available processors (capped at 4 to avoid API rate limits)
+   - Results are collected in a ConcurrentHashMap for thread-safe operations
+
+3. **API Rate Limiting**:
+   - Implements automatic rate limiting to comply with CoinGecko's API restrictions
+   - Spaces API calls to avoid hitting rate limits (approximately 50 calls per minute)
+   - Automatic retry mechanism with exponential backoff for 429 (Too Many Requests) responses
+
+4. **Cancellation Support**:
+   - Long-running analysis can be cancelled by the user
+   - Uses AtomicBoolean flags for thread-safe cancellation requests
+   - Gracefully shuts down thread pools when cancellation is requested
+
+The recommendation system balances accuracy, performance, and API usage to provide timely investment advice while respecting external API limitations.
+
 ## Testing
 
 The project includes JUnit 5 tests for all components:
