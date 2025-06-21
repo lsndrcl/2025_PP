@@ -15,7 +15,7 @@ import org.json.JSONObject;
  */
 public class Account {
     private double balance;
-    private final List<Transaction> transactions;
+    private final List<com.myapp.Transaction> transactions;
 
     /**
      * Creates a new empty account.
@@ -29,7 +29,7 @@ public class Account {
         return balance;
     }
 
-    public List<Transaction> getTransactions() {
+    public List<com.myapp.Transaction> getTransactions() {
         return new ArrayList<>(transactions);
     }
 
@@ -41,7 +41,7 @@ public class Account {
     public void deposit(double amount, String description) {
         if (amount <= 0) throw new IllegalArgumentException("Deposit amount must be positive.");
         balance += amount;
-        transactions.add(new Transaction(TransactionType.DEPOSIT, amount, description));
+        transactions.add(new com.myapp.Transaction(com.myapp.TransactionType.DEPOSIT, amount, description));
     }
 
     /**
@@ -54,6 +54,19 @@ public class Account {
         if (amount > balance) throw new IllegalStateException("Insufficient balance.");
         balance -= amount;
         transactions.add(new Transaction(TransactionType.WITHDRAWAL, amount, description));
+    }
+
+    public void deposit(double amount, String description, TransactionType type) {
+        if (amount <= 0) throw new IllegalArgumentException("Deposit amount must be positive.");
+        balance += amount;
+        transactions.add(new Transaction(type, amount, description));
+    }
+
+    public void withdraw(double amount, String description, TransactionType type) {
+        if (amount <= 0) throw new IllegalArgumentException("Withdrawal amount must be positive.");
+        if (amount > balance) throw new IllegalStateException("Insufficient balance.");
+        balance -= amount;
+        transactions.add(new Transaction(type, amount, description));
     }
 
     /**

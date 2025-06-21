@@ -72,7 +72,7 @@ public class Portfolio {
         if (price <= 0) throw new IllegalArgumentException("Price must be positive");
         
         double totalCost = amount * price;
-        account.withdraw(totalCost, "Purchase of " + amount + " " + symbol);
+        account.withdraw(totalCost, "Purchase of " + amount + " " + symbol, TransactionType.CRYPTO_PURCHASE);
         
         // Update holdings
         holdings.put(symbol, holdings.getOrDefault(symbol, 0.0) + amount);
@@ -121,7 +121,7 @@ public class Portfolio {
         }
         
         double totalValue = amount * price;
-        account.deposit(totalValue, "Sale of " + amount + " " + symbol);
+        account.deposit(totalValue, "Sale of " + amount + " " + symbol, TransactionType.CRYPTO_SALE);
         
         // Update holdings
         double newAmount = currentAmount - amount;
