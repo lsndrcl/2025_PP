@@ -1,7 +1,6 @@
 package com.myapp;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Represents a user's crypto portfolio, tracking owned cryptocurrencies and transactions.
@@ -10,6 +9,7 @@ public class Portfolio {
     private final Account account;
     private final Map<String, Double> holdings;  // Symbol -> Amount
     private final Map<String, Double> purchasePrices;  // Symbol -> Average Purchase Price
+    private final Map<String, List<Position>> positions; // Symbol -> List of positions
 
     /**
      * Creates a new portfolio linked to a user account.
@@ -19,6 +19,7 @@ public class Portfolio {
         this.account = account;
         this.holdings = new HashMap<>();
         this.purchasePrices = new HashMap<>();
+        this.positions = new HashMap<>();
     }
 
     /**
@@ -215,5 +216,121 @@ public class Portfolio {
         
         return ((currentPrice - purchasePrice) / purchasePrice) * 100.0;
     }
+
+    /**
+     * Apre una posizione short su una criptovaluta specificata.
+     *
+     * Il metodo calcola il collaterale richiesto (importo * prezzo), lo preleva
+     * dall'account e registra la posizione tra le posizioni aperte del portafoglio.
+     *
+     * @param symbol Il simbolo della criptovaluta (es. "BTC")
+     * @param amount La quantità di criptovaluta da shortare
+     * @param price Il prezzo corrente della criptovaluta al momento dell'apertura
+     * @throws IllegalArgumentException Se amount o price sono <= 0
+     */
+    public void openShortPosition(String symbol, double amount, double price) {
+        if (amount <= 0) throw new IllegalArgumentException("Amount must be positive");
+        if (price <= 0) throw new IllegalArgumentException("Price must be positive");
+
+        double collateral = amount * price; // Collaterale richiesto per la posizione short
+        account.withdraw(collateral, "Short position collateral for " + amount + " " + symbol,
+                TransactionType.CRYPTO_SHORT_OPEN);
+
+        long timestamp = System.currentTimeMillis();
+        Position shortPosition = new Position(symbol, amount, price, PositionType.SHORT, timestamp);
+
+        positions.computeIfAbsent(symbol, k -> new ArrayList<>()).add(shortPosition);
+    }
+
+
+    /**
+     * Chiude una posizione short per una determinata criptovaluta.
+     *
+     * Il metodo chiude una o più posizioni short per la quantità richiesta,
+     * calcola il profitto o la perdita (PnL) per ciascuna e restituisce
+     * all'account il collaterale originale più l'eventuale profitto.
+     *
+     * Se la quantità da chiudere è maggiore delle posizioni esistenti,
+     * viene sollevata un'eccezione.
+     *
+     * @param symbol Il simbolo della criptovaluta (es. "BTC")
+     * @param amount La quantità da chiudere
+     * @param currentPrice Il prezzo di mercato attuale della criptovaluta
+     * @return Il profitto o perdita totale (PnL) ottenuto dalla chiusura
+     * @throws IllegalStateException Se non ci sono sufficienti posizioni short aperte
+     */
+    public double closeShortPosition(String symbol, double amount, double currentPrice) {
+        List<Position> symbolPositions = positions.get(symbol);
+        if (symbolPositions == null) throw new IllegalStateException("No short positions for " + symbol);
+
+        double remainingToClose = amount;
+        double totalPnL = 0.0;
+        Iterator<Position> iterator = symbolPositions.iterator();
+
+        while (iterator.hasNext() && remainingToClose > 0) {
+            Position pos = iterator.next();
+            if (pos.getType() != PositionType.SHORT) continue;
+
+            double positionAmount = pos.getAmount();
+            double amountToClose = Math.min(remainingToClose, positionAmount);
+
+            // PnL per short: guadagno quando prezzo scende
+            double returnAmount = amountToClose * (2 * pos.getEntryPrice() - currentPrice);
+            totalPnL += amountToClose * (pos.getEntryPrice() - currentPrice);
+            account.deposit(returnAmount, "Close short position " + amountToClose + " " + symbol,
+                    TransactionType.CRYPTO_SHORT_CLOSE);
+
+            if (amountToClose == positionAmount) {
+                iterator.remove();
+            } else {
+                pos.setAmount(positionAmount - amountToClose);
+            }
+
+            remainingToClose -= amountToClose;
+
+            if (remainingToClose > 0) {
+                throw new IllegalStateException("Not enough short positions to close the requested amount.");
+            }
+
+        }
+
+        return totalPnL;
+    }
+
+
+    /**
+     * Restituisce una mappa delle posizioni short attualmente aperte.
+     *
+     * La mappa contiene per ogni criptovaluta la quantità totale shortata.
+     *
+     * @return Una mappa da simbolo di criptovaluta a quantità shortata
+     */
+    public Map<String, Double> getShortPositions() {
+        Map<String, Double> shorts = new HashMap<>();
+        for (Map.Entry<String, List<Position>> entry : positions.entrySet()) {
+            double totalShort = entry.getValue().stream()
+                    .filter(p -> p.getType() == PositionType.SHORT)
+                    .mapToDouble(Position::getAmount)
+                    .sum();
+            if (totalShort > 0) {
+                shorts.put(entry.getKey(), totalShort);
+            }
+        }
+        return shorts;
+    }
+
+
+    /**
+     * Restituisce tutte le posizioni aperte (long e short) nel portafoglio.
+     *
+     * La mappa risultante è immutabile e mostra ogni simbolo associato alla lista
+     * delle relative posizioni (long o short).
+     *
+     * @return Una mappa non modificabile da simbolo a lista di posizioni
+     */
+    public Map<String, List<Position>> getAllPositions() {
+        return Collections.unmodifiableMap(positions);
+    }
+
 }
 

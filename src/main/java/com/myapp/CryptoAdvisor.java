@@ -64,9 +64,12 @@ public class CryptoAdvisor {
      * @return The symbol of the recommended coin (e.g., "BTC", "ETH"), or null if no data is usable.
      * @throws Exception if model training or data retrieval fails.
      */
+
+    /*
     public String recommendCoin() throws Exception {
         return recommendCoin(new AtomicBoolean(false));
     }
+     */
     
     /**
      * Recommends the best coin to invest in based on predicted price growth,

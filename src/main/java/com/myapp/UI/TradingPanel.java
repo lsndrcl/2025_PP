@@ -1,13 +1,14 @@
 package com.myapp.UI;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.text.NumberFormat;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
-import com.myapp.Portfolio;
-import com.myapp.CryptoAdvisor;
-import com.myapp.CryptoService;
+import java.util.List;
+
+import com.myapp.*;
 
 /**
  * com.myapp.UI.TradingPanel is a Swing-based GUI panel for simulating cryptocurrency trading operations.
@@ -17,6 +18,8 @@ public class TradingPanel extends JPanel {
     private final JComboBox<String> coinBox;
     private final JTextField amountField;
     private final JTextArea outputArea;
+    private JTable shortPositionsTable;
+    private DefaultTableModel shortTableModel;
     private SwingWorker<Void, Void> currentMLTask;
     private final AtomicBoolean cancelRequested = new AtomicBoolean(false);
     private final NumberFormat currencyFormat;
@@ -100,6 +103,12 @@ public class TradingPanel extends JPanel {
         JButton clearButton = new JButton("Clear Output");
         clearButton.setPreferredSize(buttonSize);
 
+        JButton shortButton = new JButton("Short");
+        shortButton.setPreferredSize(buttonSize);
+
+        JButton closeShortButton = new JButton("Close Short");
+        closeShortButton.setPreferredSize(buttonSize);
+
         // Add buttons to panel
         buttonPanel.add(buyButton);
         buttonPanel.add(sellButton);
@@ -107,11 +116,23 @@ public class TradingPanel extends JPanel {
         buttonPanel.add(recommendButton);
         buttonPanel.add(cancelButton);
         buttonPanel.add(clearButton);
+        buttonPanel.add(shortButton);
+        buttonPanel.add(closeShortButton);
 
         // Create output area
         outputArea = new JTextArea(8, 40); // Reduced height to save space
         outputArea.setEditable(false);
+
+        //shorting elements
+        String[] colNames = {"Coin", "Amount", "Entry Price", "Current Price", "PnL"};
+        shortTableModel = new DefaultTableModel(colNames, 0);
+        shortPositionsTable = new JTable(shortTableModel);
+        JScrollPane shortScrollPane = new JScrollPane(shortPositionsTable);
+        shortScrollPane.setPreferredSize(new Dimension(400, 120));
+
         JScrollPane scroll = new JScrollPane(outputArea);
+        tradingControlsPanel.add(shortScrollPane, BorderLayout.EAST);
+
         
         // Add components to trading controls panel
         tradingControlsPanel.add(inputPanel, BorderLayout.NORTH);
@@ -140,6 +161,7 @@ public class TradingPanel extends JPanel {
                 
                 // Refresh portfolio display
                 portfolioBalancePanel.refreshData();
+                updateShortTable();
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage(), "Buy Error", JOptionPane.ERROR_MESSAGE);
             }
@@ -199,6 +221,7 @@ public class TradingPanel extends JPanel {
                     
                     // Refresh portfolio display
                     portfolioBalancePanel.refreshData();
+                    updateShortTable();
                 } else if (choice == JOptionPane.NO_OPTION) {
                     // Sell Specific Amount
                     String input = JOptionPane.showInputDialog(this,
@@ -231,6 +254,7 @@ public class TradingPanel extends JPanel {
                     
                     // Refresh portfolio display
                     portfolioBalancePanel.refreshData();
+                    updateShortTable();
                 }
                 // Cancel option does nothing
             } catch (Exception ex) {
@@ -254,6 +278,7 @@ public class TradingPanel extends JPanel {
                 
                 // Refresh portfolio display
                 portfolioBalancePanel.refreshData();
+                updateShortTable();
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage(), "Price Refresh Error", JOptionPane.ERROR_MESSAGE);
             }
@@ -312,6 +337,57 @@ public class TradingPanel extends JPanel {
                 }
             });
         });
+
+        shortButton.addActionListener(e -> {
+            try {
+                String coin = (String) coinBox.getSelectedItem();
+                double amount = Double.parseDouble(amountField.getText());
+
+                // Ottieni prezzo corrente
+                CryptoService service = new CryptoService();
+                double price = service.getCurrentPrices().get(coin);
+
+                portfolio.openShortPosition(coin, amount, price);
+                outputArea.append("Opened short position: " + amount + " " + coin + " at $" + price + "\n");
+
+                portfolioBalancePanel.refreshData();
+                updateShortTable();
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage(), "Short Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        closeShortButton.addActionListener(e -> {
+            try {
+                String coin = (String) coinBox.getSelectedItem();
+                Map<String, Double> shorts = portfolio.getShortPositions();
+                double availableShort = shorts.getOrDefault(coin, 0.0);
+
+                if (availableShort <= 0) {
+                    JOptionPane.showMessageDialog(this, "No short positions for " + coin, "No Short Position", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+
+                String input = JOptionPane.showInputDialog(this,
+                        String.format("Enter amount to close (max %.8f %s):", availableShort, coin));
+
+                if (input != null) {
+                    double amount = Double.parseDouble(input);
+                    if (amount > availableShort) throw new IllegalArgumentException("Amount exceeds available short position");
+
+                    CryptoService service = new CryptoService();
+                    double currentPrice = service.getCurrentPrices().get(coin);
+
+                    double pnl = portfolio.closeShortPosition(coin, amount, currentPrice);
+                    outputArea.append(String.format("Closed short: %.8f %s, P&L: $%.2f\n", amount, coin, pnl));
+
+                    portfolioBalancePanel.refreshData();
+                    updateShortTable();
+                }
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage(), "Close Short Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
         
         // Cancel button initially disabled
         cancelButton.setEnabled(false);
@@ -369,4 +445,36 @@ public class TradingPanel extends JPanel {
             return String.format("$%.2f", price);
         }
     }
+
+    private void updateShortTable() {
+        shortTableModel.setRowCount(0); // Clear
+
+        try {
+            Map<String, List<Position>> allPositions = portfolio.getAllPositions();
+            CryptoService service = new CryptoService();
+            Map<String, Double> currentPrices = service.getCurrentPrices();
+
+            for (Map.Entry<String, List<Position>> entry : allPositions.entrySet()) {
+                for (Position pos : entry.getValue()) {
+                    if (pos.getType() == PositionType.SHORT) {
+                        String coin = pos.getSymbol();
+                        double entryPrice = pos.getEntryPrice();
+                        double currentPrice = currentPrices.getOrDefault(coin, entryPrice);
+                        double pnl = (entryPrice - currentPrice) * pos.getAmount();
+
+                        shortTableModel.addRow(new Object[]{
+                                coin,
+                                pos.getAmount(),
+                                String.format("%.2f", entryPrice),
+                                String.format("%.2f", currentPrice),
+                                String.format("%.2f", pnl)
+                        });
+                    }
+                }
+            }
+        } catch (Exception e) {
+            outputArea.append("Error updating short table: " + e.getMessage() + "\n");
+        }
+    }
+
 }
