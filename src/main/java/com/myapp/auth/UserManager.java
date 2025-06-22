@@ -231,7 +231,8 @@ public class UserManager {
                 if (userJson.has("portfolio")) {
                     JSONObject portfolioJson = userJson.getJSONObject("portfolio");
                     
-                    // Create a map to store purchase prices
+                    // Create maps for holdings and purchase prices
+                    Map<String, Double> holdings = new HashMap<>();
                     Map<String, Double> purchasePrices = new HashMap<>();
                     
                     // Load purchase prices if available
@@ -249,11 +250,25 @@ public class UserManager {
                         // Add each holding
                         for (String coinSymbol : holdingsJson.keySet()) {
                             double amount = holdingsJson.getDouble(coinSymbol);
-                            double purchasePrice = purchasePrices.getOrDefault(coinSymbol, 1.0);
-                            
-                            // Use the saved purchase price if available
-                            user.getPortfolio().buyCrypto(coinSymbol, amount, purchasePrice);
+                            holdings.put(coinSymbol, amount);
                         }
+                    }
+                    
+                    // Directly set the holdings and purchase prices using reflection
+                    try {
+                        java.lang.reflect.Field holdingsField = user.getPortfolio().getClass().getDeclaredField("holdings");
+                        holdingsField.setAccessible(true);
+                        Map<String, Double> portfolioHoldings = (Map<String, Double>) holdingsField.get(user.getPortfolio());
+                        portfolioHoldings.clear();
+                        portfolioHoldings.putAll(holdings);
+                        
+                        java.lang.reflect.Field pricesField = user.getPortfolio().getClass().getDeclaredField("purchasePrices");
+                        pricesField.setAccessible(true);
+                        Map<String, Double> portfolioPrices = (Map<String, Double>) pricesField.get(user.getPortfolio());
+                        portfolioPrices.clear();
+                        portfolioPrices.putAll(purchasePrices);
+                    } catch (Exception e) {
+                        System.err.println("Error setting portfolio data: " + e.getMessage());
                     }
                 }
                 
