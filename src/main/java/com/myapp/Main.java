@@ -18,7 +18,7 @@ public class Main {
 
             User user = loginDialog.getLoggedInUser();
             if (user != null) {
-                MainFrame app = new MainFrame(user);
+                MainFrame app = new MainFrame(user, userManager);
                 app.setVisible(true);
             } else {
                 System.exit(0); // Exit if login canceled

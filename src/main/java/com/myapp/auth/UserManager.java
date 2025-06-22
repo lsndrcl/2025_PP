@@ -1,5 +1,6 @@
 package com.myapp.auth;
 
+import com.myapp.DataManager;
 import com.myapp.User;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -13,6 +14,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Base64;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -22,7 +24,6 @@ import java.util.Map;
  */
 public class UserManager {
     private static final String USERS_FILE = "users.json";
-    private static final String DATA_DIR = "data";
     
     private final Map<String, User> users;
     private final Path usersFilePath;
@@ -33,13 +34,10 @@ public class UserManager {
     public UserManager() {
         this.users = new HashMap<>();
         
-        // Ensure data directory exists
-        File dataDir = new File(DATA_DIR);
-        if (!dataDir.exists()) {
-            dataDir.mkdir();
-        }
+        // Initialize data directories
+        DataManager.initializeDataDirectories();
         
-        this.usersFilePath = Paths.get(DATA_DIR, USERS_FILE);
+        this.usersFilePath = Paths.get(DataManager.DATA_DIR, USERS_FILE);
         
         // Load existing users
         loadUsers();
@@ -145,8 +143,9 @@ public class UserManager {
                 
                 // Add transactions if they exist
                 if (!user.getAccount().getTransactions().isEmpty()) {
-                    user.getAccount().exportTransactionsToJson(DATA_DIR + "/" + user.getUsername() + "_transactions.json");
-                    accountJson.put("transactionsFile", user.getUsername() + "_transactions.json");
+                    String transactionFile = user.getUsername() + "_transactions.json";
+                    user.getAccount().exportTransactionsToJson(DataManager.DATA_DIR + "/" + transactionFile);
+                    accountJson.put("transactionsFile", transactionFile);
                 }
                 
                 userJson.put("account", accountJson);
@@ -169,8 +168,8 @@ public class UserManager {
             usersArray.put(userJson);
         }
         
-        // Write to file
-        Files.write(usersFilePath, usersArray.toString().getBytes());
+        // Save data using DataManager
+        DataManager.saveJsonData(usersArray, usersFilePath);
     }
     
     /**
@@ -183,8 +182,8 @@ public class UserManager {
         }
         
         try {
-            // Read and parse the file
-            String content = new String(Files.readAllBytes(usersFilePath));
+            // Read and parse the file using DataManager
+            String content = DataManager.loadJsonData(usersFilePath);
             JSONArray usersArray = new JSONArray(content);
             
             for (int i = 0; i < usersArray.length(); i++) {
@@ -209,7 +208,7 @@ public class UserManager {
                     // Load transactions if available
                     if (accountJson.has("transactionsFile")) {
                         String transactionsFile = accountJson.getString("transactionsFile");
-                        Path transactionsPath = Paths.get(DATA_DIR, transactionsFile);
+                        Path transactionsPath = Paths.get(DataManager.DATA_DIR, transactionsFile);
                         
                         if (Files.exists(transactionsPath)) {
                             // Clear the initial deposit transaction
@@ -243,6 +242,64 @@ public class UserManager {
             
         } catch (Exception e) {
             System.err.println("Error loading users: " + e.getMessage());
+            e.printStackTrace();
+            
+            // Try to restore from backup if loading fails
+            if (DataManager.restoreFromBackup(USERS_FILE)) {
+                System.out.println("Restored users data from backup. Attempting to load again...");
+                loadUsers(); // Try loading again
+            }
+        }
+    }
+    
+    /**
+     * Creates a backup of the current users file if it exists
+     */
+    private void createBackup() {
+        try {
+            if (Files.exists(usersFilePath)) {
+                DataManager.createBackup(usersFilePath);
+            }
+        } catch (IOException e) {
+            System.err.println("Failed to create backup: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * Saves all user data on application exit
+     */
+    public void saveAllUserData() {
+        try {
+            // Save users file
+            saveUsers();
+            
+            // Save each user's transactions
+            for (User user : users.values()) {
+                if (user.getAccount() != null && !user.getAccount().getTransactions().isEmpty()) {
+                    String transactionFile = user.getUsername() + "_transactions.json";
+                    Path transactionPath = Paths.get(DataManager.DATA_DIR, transactionFile);
+                    
+                    // Convert transactions to JSON array
+                    JSONArray transactionsArray = new JSONArray();
+                    for (com.myapp.Transaction tx : user.getAccount().getTransactions()) {
+                        JSONObject txJson = new JSONObject();
+                        txJson.put("transactionId", tx.getTransactionId());
+                        txJson.put("timestamp", tx.getTimestamp().toString());
+                        txJson.put("type", tx.getType().toString());
+                        txJson.put("amount", tx.getAmount());
+                        txJson.put("description", tx.getDescription());
+                        
+                        transactionsArray.put(txJson);
+                    }
+                    
+                    // Save using DataManager
+                    DataManager.saveJsonData(transactionsArray, transactionPath);
+                }
+            }
+            
+            System.out.println("All user data saved successfully");
+        } catch (IOException e) {
+            System.err.println("Error saving user data: " + e.getMessage());
             e.printStackTrace();
         }
     }

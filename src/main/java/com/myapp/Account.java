@@ -2,6 +2,7 @@ package com.myapp;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
@@ -104,7 +105,15 @@ public class Account {
      * @throws IOException If the file cannot be read or parsed
      */
     public void importTransactionsFromJson(String filePath) throws IOException {
-        String jsonContent = new String(Files.readAllBytes(Paths.get(filePath)));
+        String jsonContent;
+        try {
+            // Use DataManager to load the JSON data
+            Path path = Paths.get(filePath);
+            jsonContent = DataManager.loadJsonData(path);
+        } catch (IOException e) {
+            throw new IOException("Failed to load transactions from " + filePath + ": " + e.getMessage());
+        }
+        
         JSONArray jsonArray = new JSONArray(jsonContent);
         
         // Store the original balance and transactions for rollback in case of error
@@ -176,7 +185,9 @@ public class Account {
             jsonArray.put(txJson);
         }
         
-        Files.write(Paths.get(filePath), jsonArray.toString().getBytes());
+        // Use DataManager to save the JSON data
+        Path path = Paths.get(filePath);
+        DataManager.saveJsonData(jsonArray, path);
     }
 }
 

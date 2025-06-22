@@ -1,19 +1,32 @@
 package com.myapp.UI;
 import com.myapp.User;
+import com.myapp.auth.UserManager;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 
 public class MainFrame extends JFrame {
     private final AccountPanel accountPanel;
     private final TradingPanel tradingPanel;
     private final User currentUser;
+    private final UserManager userManager;
 
-    public MainFrame(User user) {
+    public MainFrame(User user, UserManager userManager) {
         super("JavaBankCrypto");
         this.currentUser = user;
+        this.userManager = userManager;
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1000, 600);
         setLayout(new BorderLayout());
+
+        // Add window listener to save data on exit
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                saveDataOnExit();
+            }
+        });
 
         // Create header panel with username display
         JPanel headerPanel = createHeaderPanel();
@@ -58,57 +71,52 @@ public class MainFrame extends JFrame {
         
         // Add logout button
         JButton logoutButton = new JButton("Logout");
-        logoutButton.addActionListener(e -> {
-            int choice = JOptionPane.showConfirmDialog(
-                this,
-                "Are you sure you want to logout?",
-                "Confirm Logout",
-                JOptionPane.YES_NO_OPTION
-            );
-            
-            if (choice == JOptionPane.YES_OPTION) {
-                dispose();
-                // Show login dialog again
-                SwingUtilities.invokeLater(() -> {
-                    try {
-                        // Create a new login dialog
-                        com.myapp.auth.UserManager userManager = new com.myapp.auth.UserManager();
-                        LoginDialog loginDialog = new LoginDialog(null, userManager);
-                        loginDialog.setVisible(true);
-                        
-                        User user = loginDialog.getLoggedInUser();
-                        if (user != null) {
-                            MainFrame app = new MainFrame(user);
-                            app.setVisible(true);
-                        } else {
-                            System.exit(0);
-                        }
-                    } catch (Exception ex) {
-                        JOptionPane.showMessageDialog(null, 
-                            "Error during logout: " + ex.getMessage(), 
-                            "Error", 
-                            JOptionPane.ERROR_MESSAGE);
-                        System.exit(1);
-                    }
-                });
-            }
-        });
-        
-        userInfoPanel.add(Box.createHorizontalStrut(10));
+        logoutButton.addActionListener(e -> logout());
         userInfoPanel.add(logoutButton);
         
         headerPanel.add(userInfoPanel, BorderLayout.EAST);
         
-        // Add a separator line
-        JSeparator separator = new JSeparator();
-        JPanel separatorPanel = new JPanel(new BorderLayout());
-        separatorPanel.add(separator, BorderLayout.CENTER);
-        separatorPanel.setBorder(BorderFactory.createEmptyBorder(5, 0, 0, 0));
+        return headerPanel;
+    }
+    
+    /**
+     * Handles user logout
+     */
+    private void logout() {
+        // Save data before logout
+        saveDataOnExit();
         
-        JPanel combinedPanel = new JPanel(new BorderLayout());
-        combinedPanel.add(headerPanel, BorderLayout.CENTER);
-        combinedPanel.add(separatorPanel, BorderLayout.SOUTH);
+        // Close this window
+        dispose();
         
-        return combinedPanel;
+        // Show login dialog again
+        SwingUtilities.invokeLater(() -> {
+            LoginDialog loginDialog = new LoginDialog(null, userManager);
+            loginDialog.setVisible(true);
+            
+            User user = loginDialog.getLoggedInUser();
+            if (user != null) {
+                MainFrame app = new MainFrame(user, userManager);
+                app.setVisible(true);
+            } else {
+                System.exit(0); // Exit if login canceled
+            }
+        });
+    }
+    
+    /**
+     * Saves all user data before exit
+     */
+    private void saveDataOnExit() {
+        try {
+            userManager.saveAllUserData();
+            System.out.println("Data saved successfully");
+        } catch (Exception ex) {
+            System.err.println("Error saving data: " + ex.getMessage());
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                "There was an error saving your data: " + ex.getMessage(),
+                "Save Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 }
