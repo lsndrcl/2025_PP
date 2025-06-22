@@ -20,6 +20,7 @@ public class TradingPanel extends JPanel {
     private SwingWorker<Void, Void> currentMLTask;
     private final AtomicBoolean cancelRequested = new AtomicBoolean(false);
     private final NumberFormat currencyFormat;
+    private final PortfolioBalancePanel portfolioBalancePanel;
 
     public TradingPanel(Portfolio portfolio) {
         this.portfolio = portfolio;
@@ -30,8 +31,27 @@ public class TradingPanel extends JPanel {
         currencyFormat.setMinimumFractionDigits(2);
         currencyFormat.setMaximumFractionDigits(8);
 
-        JPanel topPanel = new JPanel(new GridLayout(3, 2));
-
+        // Create portfolio balance panel
+        portfolioBalancePanel = new PortfolioBalancePanel(portfolio);
+        
+        // Create trading controls panel
+        JPanel tradingControlsPanel = new JPanel(new BorderLayout());
+        
+        // Create input panel with GridBagLayout for better responsiveness
+        JPanel inputPanel = new JPanel(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(5, 5, 5, 5);
+        
+        // Coin selection
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.weightx = 0.2;
+        inputPanel.add(new JLabel("Coin:"), gbc);
+        
+        gbc.gridx = 1;
+        gbc.gridy = 0;
+        gbc.weightx = 0.8;
         String[] coinSymbols;
         try {
             CryptoService service = new CryptoService();
@@ -41,38 +61,74 @@ public class TradingPanel extends JPanel {
             coinSymbols = new String[]{"BTC", "ETH", "ADA"}; // fallback
         }
         coinBox = new JComboBox<>(coinSymbols);
+        inputPanel.add(coinBox, gbc);
+        
+        // Amount input
+        gbc.gridx = 0;
+        gbc.gridy = 1;
+        gbc.weightx = 0.2;
+        inputPanel.add(new JLabel("Amount (Fiat or Quantity):"), gbc);
+        
+        gbc.gridx = 1;
+        gbc.gridy = 1;
+        gbc.weightx = 0.8;
+        amountField = new JTextField(10);
+        inputPanel.add(amountField, gbc);
 
-        amountField = new JTextField();
-
-        topPanel.add(new JLabel("Coin:"));
-        topPanel.add(coinBox);
-        topPanel.add(new JLabel("Amount (Fiat or Quantity):"));
-        topPanel.add(amountField);
-
+        // Create button panel with FlowLayout to keep buttons visible
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        buttonPanel.setBorder(BorderFactory.createEmptyBorder(5, 0, 5, 0));
+        
+        // Create buttons with consistent size
+        Dimension buttonSize = new Dimension(120, 30);
+        
         JButton buyButton = new JButton("Buy");
+        buyButton.setPreferredSize(buttonSize);
+        
         JButton sellButton = new JButton("Sell");
+        sellButton.setPreferredSize(buttonSize);
+        
         JButton refreshButton = new JButton("Refresh Prices");
+        refreshButton.setPreferredSize(buttonSize);
+        
         JButton recommendButton = new JButton("Recommend");
+        recommendButton.setPreferredSize(buttonSize);
+        
         JButton cancelButton = new JButton("Cancel ML");
+        cancelButton.setPreferredSize(buttonSize);
+        
         JButton clearButton = new JButton("Clear Output");
-        JButton showBalanceButton = new JButton("Show Balance");
+        clearButton.setPreferredSize(buttonSize);
 
-        JPanel buttonPanel = new JPanel();
+        // Add buttons to panel
         buttonPanel.add(buyButton);
         buttonPanel.add(sellButton);
         buttonPanel.add(refreshButton);
         buttonPanel.add(recommendButton);
         buttonPanel.add(cancelButton);
         buttonPanel.add(clearButton);
-        buttonPanel.add(showBalanceButton);
 
-        outputArea = new JTextArea(10, 40);
+        // Create output area
+        outputArea = new JTextArea(8, 40); // Reduced height to save space
         outputArea.setEditable(false);
         JScrollPane scroll = new JScrollPane(outputArea);
-
-        add(topPanel, BorderLayout.NORTH);
-        add(buttonPanel, BorderLayout.CENTER);
-        add(scroll, BorderLayout.SOUTH);
+        
+        // Add components to trading controls panel
+        tradingControlsPanel.add(inputPanel, BorderLayout.NORTH);
+        tradingControlsPanel.add(buttonPanel, BorderLayout.CENTER);
+        tradingControlsPanel.add(scroll, BorderLayout.SOUTH);
+        
+        // Create split pane with minimum sizes to ensure both panels are visible
+        JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, 
+                portfolioBalancePanel, tradingControlsPanel);
+        splitPane.setResizeWeight(0.5);
+        splitPane.setDividerLocation(250);
+        
+        // Set minimum sizes for components to ensure they remain visible
+        portfolioBalancePanel.setMinimumSize(new Dimension(300, 200));
+        tradingControlsPanel.setMinimumSize(new Dimension(300, 200));
+        
+        add(splitPane, BorderLayout.CENTER);
 
         // Action Listeners
         buyButton.addActionListener(e -> {
@@ -81,6 +137,9 @@ public class TradingPanel extends JPanel {
                 double amount = Double.parseDouble(amountField.getText());
                 portfolio.buyCrypto(coin, amount);
                 outputArea.append("Bought " + coin + " for $" + amount + "\n");
+                
+                // Refresh portfolio display
+                portfolioBalancePanel.refreshData();
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage(), "Buy Error", JOptionPane.ERROR_MESSAGE);
             }
@@ -137,6 +196,9 @@ public class TradingPanel extends JPanel {
                     // Sell All
                     double value = portfolio.sellCrypto(coin, availableBalance);
                     outputArea.append(String.format("Sold all %.8f %s for $%.2f\n", availableBalance, coin, value));
+                    
+                    // Refresh portfolio display
+                    portfolioBalancePanel.refreshData();
                 } else if (choice == JOptionPane.NO_OPTION) {
                     // Sell Specific Amount
                     String input = JOptionPane.showInputDialog(this,
@@ -166,6 +228,9 @@ public class TradingPanel extends JPanel {
 
                     double value = portfolio.sellCrypto(coin, amount);
                     outputArea.append(String.format("Sold %.8f %s for $%.2f\n", amount, coin, value));
+                    
+                    // Refresh portfolio display
+                    portfolioBalancePanel.refreshData();
                 }
                 // Cancel option does nothing
             } catch (Exception ex) {
@@ -186,6 +251,9 @@ public class TradingPanel extends JPanel {
                             formatCryptoPrice(entry.getValue())));
                 }
                 outputArea.append("---------------------\n");
+                
+                // Refresh portfolio display
+                portfolioBalancePanel.refreshData();
             } catch (Exception ex) {
                 JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage(), "Price Refresh Error", JOptionPane.ERROR_MESSAGE);
             }
@@ -258,44 +326,6 @@ public class TradingPanel extends JPanel {
         clearButton.addActionListener(e -> {
             outputArea.setText("");
         });
-
-        showBalanceButton.addActionListener(e -> {
-            try {
-                Map<String, Double> holdings = portfolio.getHoldings();
-                if (holdings.isEmpty()) {
-                    outputArea.append("\nYou don't own any cryptocurrencies.\n");
-                    return;
-                }
-
-                CryptoService service = new CryptoService();
-                Map<String, Double> prices = service.getCurrentPrices();
-
-                outputArea.append("\n--- Current Portfolio Holdings ---\n");
-                double totalValue = 0.0;
-
-                for (Map.Entry<String, Double> entry : holdings.entrySet()) {
-                    String symbol = entry.getKey();
-                    double amount = entry.getValue();
-                    double price = prices.getOrDefault(symbol, 0.0);
-                    double value = amount * price;
-                    totalValue += value;
-
-                    outputArea.append(String.format("%s: %.8f @ %s each = %s\n",
-                            symbol, amount, formatCryptoPrice(price), currencyFormat.format(value)));
-                }
-
-                outputArea.append(String.format("Total Portfolio Value: %s\n", currencyFormat.format(totalValue)));
-                outputArea.append("-----------------------------------\n");
-
-                double fiatBalance = portfolio.getAccount().getBalance();
-                outputArea.append(String.format("Fiat Balance: %s\n", currencyFormat.format(fiatBalance)));
-
-
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage(), "Balance Error", JOptionPane.ERROR_MESSAGE);
-            }
-        });
-
     }
 
     private void showLoadingDialog(String message, Runnable task) {

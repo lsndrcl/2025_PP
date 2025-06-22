@@ -80,7 +80,7 @@ This application helps users manage their finances and make informed cryptocurre
 ### Installation
 
 1. Clone the repository
-```bash
+```bashgit
 git clone https://github.com/yourusername/java-bank-crypto-project.git
 cd java-bank-crypto-project
 ```
@@ -241,6 +241,52 @@ To run a specific test class:
 ```bash
 mvn test -Dtest=UserTest
 ```
+
+## Development Challenges
+
+During the development of this project, we encountered several significant challenges that required creative solutions:
+
+### API Limitations and Integration
+
+- **Finding a Free API**: One of our biggest initial challenges was finding a reliable, free cryptocurrency API that offered both current and historical data. After evaluating several options, we settled on CoinGecko's API due to its generous free tier, but even this came with limitations.
+  
+- **Rate Limiting**: CoinGecko's free API enforces strict rate limits (50 calls per minute), which required us to implement sophisticated caching and request management to avoid hitting these limits during normal application usage.
+  
+- **Inconsistent Data Formats**: The API occasionally returned inconsistent data formats or incomplete data for certain cryptocurrencies, requiring robust error handling and data validation.
+
+### Performance Optimization
+
+- **Caching System**: We implemented a multi-level caching system (both file-based and in-memory) to minimize API calls. This required careful consideration of cache invalidation strategies and appropriate timeout values to balance freshness of data with performance.
+  
+- **Parallel Processing**: Running analysis on multiple cryptocurrencies simultaneously improved performance but introduced threading issues. We had to carefully manage thread pools and implement thread-safe data structures.
+  
+- **UI Responsiveness**: Ensuring the UI remained responsive during data fetching and analysis operations required implementing background workers and proper progress indication.
+
+### Data Management and Persistence
+
+- **JSON Serialization Edge Cases**: Handling special cases in JSON serialization/deserialization, especially with nested objects and collections in the Portfolio and Transaction classes, proved challenging.
+  
+- **Backup System**: Implementing an automatic backup system that wouldn't interfere with normal operation required careful consideration of timing and file management.
+  
+- **Data Integrity**: Ensuring data integrity across application restarts and during concurrent operations required implementing proper synchronization mechanisms.
+
+### Debugging and Testing Challenges
+
+- **Activity Errors**: One of the most persistent issues was handling "activity errors" where operations would fail due to UI thread blocking or background operations timing out. This required careful refactoring to separate UI and business logic.
+  
+- **Asynchronous Testing**: Testing components that relied on asynchronous operations (like API calls) required special testing approaches and sometimes mock objects.
+  
+- **Cross-Platform Compatibility**: Ensuring the application worked consistently across different operating systems (Windows, macOS, Linux) required addressing platform-specific UI rendering and file system access patterns.
+
+### UI Design and Implementation
+
+- **Responsive Layouts**: Creating layouts that would adapt properly to window resizing was challenging with Swing. We had to implement custom layout managers and carefully design component hierarchies.
+  
+- **Component Coordination**: Coordinating updates between different panels (e.g., ensuring the account balance updates when a transaction occurs in the trading panel) required implementing a proper event system.
+  
+- **Currency Formatting**: Implementing proper currency formatting with different symbols and decimal places for various currencies required custom formatting logic.
+
+These challenges pushed us to deepen our understanding of Java, concurrent programming, API integration, and UI design principles. The solutions we developed not only addressed the immediate issues but also improved the overall architecture and robustness of the application.
 
 ## License
 

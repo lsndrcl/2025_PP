@@ -160,8 +160,15 @@ public class UserManager {
                 for (Map.Entry<String, Double> entry : user.getPortfolio().getHoldings().entrySet()) {
                     holdingsJson.put(entry.getKey(), entry.getValue());
                 }
-                
                 portfolioJson.put("holdings", holdingsJson);
+                
+                // Save purchase prices
+                JSONObject purchasePricesJson = new JSONObject();
+                for (Map.Entry<String, Double> entry : user.getPortfolio().getPurchasePrices().entrySet()) {
+                    purchasePricesJson.put(entry.getKey(), entry.getValue());
+                }
+                portfolioJson.put("purchasePrices", purchasePricesJson);
+                
                 userJson.put("portfolio", portfolioJson);
             }
             
@@ -224,14 +231,28 @@ public class UserManager {
                 if (userJson.has("portfolio")) {
                     JSONObject portfolioJson = userJson.getJSONObject("portfolio");
                     
+                    // Create a map to store purchase prices
+                    Map<String, Double> purchasePrices = new HashMap<>();
+                    
+                    // Load purchase prices if available
+                    if (portfolioJson.has("purchasePrices")) {
+                        JSONObject pricesJson = portfolioJson.getJSONObject("purchasePrices");
+                        for (String coinSymbol : pricesJson.keySet()) {
+                            purchasePrices.put(coinSymbol, pricesJson.getDouble(coinSymbol));
+                        }
+                    }
+                    
+                    // Load holdings
                     if (portfolioJson.has("holdings")) {
                         JSONObject holdingsJson = portfolioJson.getJSONObject("holdings");
                         
                         // Add each holding
                         for (String coinSymbol : holdingsJson.keySet()) {
                             double amount = holdingsJson.getDouble(coinSymbol);
-                            // We don't know the price at which it was bought, so use 1.0 as default
-                            user.getPortfolio().buyCrypto(coinSymbol, amount, 1.0);
+                            double purchasePrice = purchasePrices.getOrDefault(coinSymbol, 1.0);
+                            
+                            // Use the saved purchase price if available
+                            user.getPortfolio().buyCrypto(coinSymbol, amount, purchasePrice);
                         }
                     }
                 }

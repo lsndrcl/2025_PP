@@ -9,6 +9,7 @@ import java.util.Map;
 public class Portfolio {
     private final Account account;
     private final Map<String, Double> holdings;  // Symbol -> Amount
+    private final Map<String, Double> purchasePrices;  // Symbol -> Average Purchase Price
 
     /**
      * Creates a new portfolio linked to a user account.
@@ -17,6 +18,7 @@ public class Portfolio {
     public Portfolio(Account account) {
         this.account = account;
         this.holdings = new HashMap<>();
+        this.purchasePrices = new HashMap<>();
     }
 
     /**
@@ -33,6 +35,23 @@ public class Portfolio {
      */
     public Map<String, Double> getHoldings() {
         return new HashMap<>(holdings);
+    }
+    
+    /**
+     * Gets a copy of the average purchase prices for each holding.
+     * @return Map of crypto symbol to average purchase price
+     */
+    public Map<String, Double> getPurchasePrices() {
+        return new HashMap<>(purchasePrices);
+    }
+    
+    /**
+     * Gets the average purchase price for a specific coin.
+     * @param symbol The crypto symbol
+     * @return The average purchase price, or 0.0 if not found
+     */
+    public double getAveragePurchasePrice(String symbol) {
+        return purchasePrices.getOrDefault(symbol, 0.0);
     }
     
     /**
@@ -75,7 +94,22 @@ public class Portfolio {
         account.withdraw(totalCost, "Purchase of " + amount + " " + symbol, TransactionType.CRYPTO_PURCHASE);
         
         // Update holdings
-        holdings.put(symbol, holdings.getOrDefault(symbol, 0.0) + amount);
+        double currentAmount = holdings.getOrDefault(symbol, 0.0);
+        double currentAvgPrice = purchasePrices.getOrDefault(symbol, 0.0);
+        
+        // Calculate new average purchase price (weighted average)
+        double newTotalAmount = currentAmount + amount;
+        double newAvgPrice;
+        
+        if (currentAmount > 0) {
+            // Calculate weighted average: (currentAmount * currentPrice + newAmount * newPrice) / totalAmount
+            newAvgPrice = ((currentAmount * currentAvgPrice) + (amount * price)) / newTotalAmount;
+        } else {
+            newAvgPrice = price;
+        }
+        
+        holdings.put(symbol, newTotalAmount);
+        purchasePrices.put(symbol, newAvgPrice);
     }
     
     /**
@@ -127,9 +161,59 @@ public class Portfolio {
         double newAmount = currentAmount - amount;
         if (newAmount > 0) {
             holdings.put(symbol, newAmount);
+            // Purchase price remains the same when selling
         } else {
             holdings.remove(symbol);
+            purchasePrices.remove(symbol);
         }
+    }
+    
+    /**
+     * Calculates the total value of the portfolio using current market prices.
+     * @return The total portfolio value in fiat
+     * @throws Exception if prices cannot be fetched
+     */
+    public double calculateTotalValue() throws Exception {
+        if (holdings.isEmpty()) {
+            return 0.0;
+        }
+        
+        CryptoService service = new CryptoService();
+        Map<String, Double> prices = service.getCurrentPrices();
+        
+        double totalValue = 0.0;
+        for (Map.Entry<String, Double> entry : holdings.entrySet()) {
+            String symbol = entry.getKey();
+            double amount = entry.getValue();
+            double price = prices.getOrDefault(symbol, 0.0);
+            totalValue += (amount * price);
+        }
+        
+        return totalValue;
+    }
+    
+    /**
+     * Calculates the profit/loss for a specific coin.
+     * @param symbol The crypto symbol
+     * @return The profit/loss percentage (positive for profit, negative for loss)
+     * @throws Exception if prices cannot be fetched
+     */
+    public double calculateProfitLossPercent(String symbol) throws Exception {
+        if (!holdings.containsKey(symbol) || !purchasePrices.containsKey(symbol)) {
+            return 0.0;
+        }
+        
+        CryptoService service = new CryptoService();
+        Map<String, Double> prices = service.getCurrentPrices();
+        
+        double currentPrice = prices.getOrDefault(symbol, 0.0);
+        double purchasePrice = purchasePrices.get(symbol);
+        
+        if (purchasePrice <= 0 || currentPrice <= 0) {
+            return 0.0;
+        }
+        
+        return ((currentPrice - purchasePrice) / purchasePrice) * 100.0;
     }
 }
 

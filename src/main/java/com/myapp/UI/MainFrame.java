@@ -17,7 +17,8 @@ public class MainFrame extends JFrame {
         this.currentUser = user;
         this.userManager = userManager;
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1000, 600);
+        setSize(1000, 700); // Increased height for better visibility
+        setMinimumSize(new Dimension(800, 600)); // Set minimum size to ensure components are visible
         setLayout(new BorderLayout());
 
         // Add window listener to save data on exit
@@ -35,12 +36,34 @@ public class MainFrame extends JFrame {
         accountPanel = new AccountPanel(user.getAccount());
         tradingPanel = new TradingPanel(user.getPortfolio());
 
+        // Create tabbed pane with custom styling
         JTabbedPane tabs = new JTabbedPane();
-        tabs.addTab("Account", accountPanel);
-        tabs.addTab("Trading", tradingPanel);
+        tabs.setFont(new Font("Arial", Font.BOLD, 14));
+        tabs.addTab("Account", new ImageIcon(), accountPanel, "View and manage your account");
+        tabs.addTab("Trading", new ImageIcon(), tradingPanel, "Buy and sell cryptocurrencies");
+        
+        // Set preferred size for tabs to ensure they're visible
+        tabs.setPreferredSize(new Dimension(800, 600));
 
         add(tabs, BorderLayout.CENTER);
+        
+        // Create a status bar
+        JPanel statusBar = new JPanel(new BorderLayout());
+        statusBar.setBorder(BorderFactory.createEtchedBorder());
+        JLabel statusLabel = new JLabel("Ready");
+        statusBar.add(statusLabel, BorderLayout.WEST);
+        add(statusBar, BorderLayout.SOUTH);
+        
+        // Center the window on screen
         setLocationRelativeTo(null);
+        
+        // Set UI properties to improve appearance
+        try {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+            SwingUtilities.updateComponentTreeUI(this);
+        } catch (Exception e) {
+            System.err.println("Could not set system look and feel: " + e.getMessage());
+        }
     }
     
     /**
@@ -49,11 +72,14 @@ public class MainFrame extends JFrame {
     private JPanel createHeaderPanel() {
         JPanel headerPanel = new JPanel();
         headerPanel.setLayout(new BorderLayout());
-        headerPanel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+        headerPanel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createEtchedBorder(),
+            BorderFactory.createEmptyBorder(5, 10, 5, 10)
+        ));
         
         // App name on the left
         JLabel appNameLabel = new JLabel("JavaBankCrypto");
-        appNameLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        appNameLabel.setFont(new Font("Arial", Font.BOLD, 18));
         headerPanel.add(appNameLabel, BorderLayout.WEST);
         
         // User info on the right
@@ -69,8 +95,9 @@ public class MainFrame extends JFrame {
         userInfoPanel.add(userIcon);
         userInfoPanel.add(usernameLabel);
         
-        // Add logout button
+        // Add logout button with improved styling
         JButton logoutButton = new JButton("Logout");
+        logoutButton.setFocusPainted(false);
         logoutButton.addActionListener(e -> logout());
         userInfoPanel.add(logoutButton);
         
