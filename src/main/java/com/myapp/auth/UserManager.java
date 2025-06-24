@@ -178,9 +178,39 @@ public class UserManager {
         // Save data using DataManager
         DataManager.saveJsonData(usersArray, usersFilePath);
     }
-    
+
     /**
-     * Loads users from the JSON file.
+     * Loads user data from a JSON file into the application's user map.
+     * <p>
+     * This method performs the following tasks:
+     * <ul>
+     *   <li>Checks if the users file exists; if not, it returns immediately.</li>
+     *   <li>Reads and parses the users JSON file using {@link DataManager#loadJsonData(Path)}.</li>
+     *   <li>For each user JSON object, extracts username and password hash and creates a {@link User} instance.</li>
+     *   <li>Loads account data if available:
+     *     <ul>
+     *       <li>Deposits initial balance if positive.</li>
+     *       <li>Imports transactions from the referenced JSON file, if it exists, replacing the initial deposit.</li>
+     *     </ul>
+     *   </li>
+     *   <li>Loads portfolio data if available:
+     *     <ul>
+     *       <li>Reads holdings and purchase prices from JSON objects.</li>
+     *       <li>Uses reflection to directly set the private holdings and purchasePrices maps in the user's portfolio.</li>
+     *     </ul>
+     *   </li>
+     *   <li>Adds each constructed user to the in-memory users map keyed by username.</li>
+     *   <li>If any exceptions occur during loading, logs the error and attempts to restore user data from a backup file, retrying the load once restored.</li>
+     * </ul>
+     * <p>
+     * This method assumes:
+     * <ul>
+     *   <li>The users file path is stored in {@code usersFilePath}.</li>
+     *   <li>JSON structure conforms to the expected schema with fields for user, account, and portfolio data.</li>
+     *   <li>Transaction importing and portfolio manipulation are handled by respective class methods and reflection.</li>
+     * </ul>
+     *
+     * @throws RuntimeException if the user data file is malformed or cannot be read, unless restored from backup successfully
      */
     private void loadUsers() {
         // Check if users file exists

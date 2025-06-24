@@ -89,9 +89,26 @@ public class CryptoAdvisor {
             return recommendCoinSequential(loader, coinIdToSymbol, cancelRequested);
         }
     }
-    
+
     /**
-     * Sequential implementation of coin recommendation.
+     * Performs a sequential scan of a given set of cryptocurrencies and recommends the one
+     * with the highest predicted growth using a machine learning model.
+     *
+     * <p>For each coin, this method:</p>
+     * <ol>
+     *   <li>Loads historical data (with caching)</li>
+     *   <li>Trains a model on the data</li>
+     *   <li>Predicts future growth</li>
+     * </ol>
+     *
+     * <p>If the operation is cancelled via the {@code cancelRequested} flag, the method
+     * terminates early and returns {@code null}.</p>
+     *
+     * @param loader            The {@link LiveDataLoader} instance to fetch coin data.
+     * @param coinIdToSymbol    A map of CoinGecko coin IDs to their corresponding symbols.
+     * @param cancelRequested   Atomic flag to support external cancellation of the task.
+     * @return The symbol of the coin with the highest predicted growth, or {@code null} if cancelled.
+     * @throws Exception If an error occurs during data fetching or model training.
      */
     private String recommendCoinSequential(LiveDataLoader loader, Map<String, String> coinIdToSymbol, AtomicBoolean cancelRequested) throws Exception {
         String bestCoin = null;
@@ -131,9 +148,32 @@ public class CryptoAdvisor {
 
         return bestCoin;
     }
-    
+
+
+
     /**
-     * Parallel implementation of coin recommendation.
+     * Performs a parallel scan of a set of cryptocurrencies and recommends the one
+     * with the highest predicted growth using a trained machine learning model.
+     *
+     * <p>This implementation leverages multithreading to improve performance when
+     * analyzing many coins. Each coin is processed in a separate thread using a
+     * {@link CompletableFuture}.</p>
+     *
+     * <p>The method supports external cancellation via the {@code cancelRequested} flag and
+     * shuts down all threads gracefully if cancellation is detected.</p>
+     *
+     * <p>Steps for each coin:</p>
+     * <ol>
+     *   <li>Loads historical data (with caching)</li>
+     *   <li>Trains a model and predicts growth</li>
+     *   <li>Stores growth in a concurrent map</li>
+     * </ol>
+     *
+     * @param loader            The {@link LiveDataLoader} instance for fetching coin data.
+     * @param coinIdToSymbol    A map of CoinGecko coin IDs to their corresponding symbols.
+     * @param cancelRequested   Atomic flag to support external cancellation.
+     * @return The symbol of the coin with the highest predicted growth, or {@code null} if cancelled.
+     * @throws Exception If data processing or threading encounters an unexpected error.
      */
     private String recommendCoinParallel(LiveDataLoader loader, Map<String, String> coinIdToSymbol, AtomicBoolean cancelRequested) throws Exception {
         ExecutorService executor = Executors.newFixedThreadPool(maxThreads);
@@ -210,9 +250,26 @@ public class CryptoAdvisor {
         
         return bestCoin;
     }
-    
+
     /**
-     * Train a model on the given data and predict growth rate.
+     * Trains a RandomForest model using the given dataset and predicts the growth rate
+     * for the latest data point (e.g., a cryptocurrency or stock price).
+     *
+     * <p>This method performs the following steps:
+     * <ul>
+     *   <li>Applies standardization to the input features.</li>
+     *   <li>Trains a RandomForest regression model using the Weka library.</li>
+     *   <li>Predicts the target value (e.g., future price) for the most recent instance.</li>
+     *   <li>Calculates and returns the relative growth between the predicted and actual price.</li>
+     *   <li>Logs the symbol, current price, predicted price, and growth percentage to console.</li>
+     * </ul>
+     *
+     * @param data   A Weka {@link weka.core.Instances} dataset, where the class attribute
+     *               (target variable) is set (typically the price to predict).
+     * @param symbol A string representing the asset's symbol (e.g., "BTC", "ETH").
+     * @return       The predicted growth ratio, calculated as
+     *               (predictedPrice - currentPrice) / currentPrice.
+     * @throws Exception If an error occurs during model training or prediction.
      */
     private double trainModelAndPredictGrowth(Instances data, String symbol) throws Exception {
         // Train RandomForest model with standardized input features
@@ -221,14 +278,18 @@ public class CryptoAdvisor {
         model.setFilter(new Standardize());
         model.buildClassifier(data);
 
+        // Use the most recent instance for prediction
         Instance latest = data.lastInstance();
         double predictedPrice = model.classifyInstance(latest);
         double currentPrice = latest.value(data.classIndex());
 
+        // Calculate relative growth
         double growth = (predictedPrice - currentPrice) / currentPrice;
 
+        // Output results
         System.out.printf("Coin %s: Current=%.2f Predicted=%.2f Growth=%.4f%n", symbol, currentPrice, predictedPrice, growth);
-        
+
         return growth;
     }
+
 }

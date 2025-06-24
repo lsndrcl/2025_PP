@@ -304,13 +304,13 @@ During the development of this project, we encountered several significant chall
   
 - **Currency Formatting**: Implementing proper currency formatting with different symbols and decimal places for various currencies required custom formatting logic.
 
-- **Backup Interface**: The UI is the main channel to use this program, however we added a simple commented out part of code in case the program needs to run only on terminal.
+- **Backup Interface**: The UI is the main channel to use this program, however we added a commented out part of code in case the program needs to run only on terminal.
 
 These challenges pushed us to deepen our understanding of Java, concurrent programming, API integration, and UI design principles. The solutions we developed not only addressed the immediate issues but also improved the overall architecture and robustness of the application.
 
 ### How we split the work (summary)
 
-- **Alessandro R.**: Implemented various features and first functioning structure of data fetching and ML crypto advising, as well as setting up all the basic classes and UI aspects. Contributed to documentation.
+- **Alessandro R.**: Implemented various features and first functioning structure of data fetching and ML crypto advising, as well as setting up all the basic classes and UI/CLI aspects. Contributed to documentation.
 
 - **Tashi P.**: Added various major features in both account and crypto sections, added details and helper methods in most classes, editing the UI respectively. Did testing. Contributed to documentation.
 

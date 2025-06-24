@@ -16,7 +16,18 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 /**
- * Provides cryptocurrency-related services such as price data retrieval and analysis.
+ * {@code CryptoService} provides cryptocurrency-related utilities including
+ * live price fetching and historical data analysis from the CoinGecko API.
+ *
+ * <p>Features include:</p>
+ * <ul>
+ *   <li>Fetching current USD prices for popular cryptocurrencies</li>
+ *   <li>Retrieving historical price data over a configurable number of days</li>
+ *   <li>Caching and rate limiting to reduce API usage</li>
+ * </ul>
+ *
+ * <p>All prices are sourced from the public CoinGecko API.</p>
+ *
  */
 public class CryptoService {
 
@@ -85,9 +96,12 @@ public class CryptoService {
         
         return parsePricesFromJson(json);
     }
-    
+
     /**
-     * Parse prices from JSON response
+     * Parses current USD prices from the CoinGecko JSON response.
+     *
+     * @param json The JSON object returned by the API.
+     * @return A map of coin symbols to their parsed USD prices.
      */
     private Map<String, Double> parsePricesFromJson(JSONObject json) {
         Map<String, Double> prices = new HashMap<>();
@@ -177,7 +191,17 @@ public class CryptoService {
         return history;
     }
 
-    // Internal helper to fetch historical prices
+
+
+    /**
+     * Fetches historical daily USD prices for a specific coin over a given number of days.
+     * Caches results to minimize API usage.
+     *
+     * @param coinId The CoinGecko ID of the coin (e.g., "bitcoin").
+     * @param days   Number of days to fetch historical data for.
+     * @return A list of historical prices, one per day.
+     * @throws IOException if an error occurs during data fetching.
+     */
     private List<Double> fetchHistoricalPrices(String coinId, int days) throws IOException {
         List<Double> prices = new ArrayList<>();
         
@@ -223,7 +247,15 @@ public class CryptoService {
         return prices;
     }
 
-    // Helper to fetch and parse JSON from a URL
+
+
+    /**
+     * Fetches JSON data from a given URL using an HTTP GET request with rate limiting and retry support.
+     *
+     * @param urlString The URL to request.
+     * @return A {@link JSONObject} representing the response body.
+     * @throws IOException if the HTTP request fails.
+     */
     private JSONObject fetchJsonFromUrl(String urlString) throws IOException {
         // Implement rate limiting
         applyRateLimit();
@@ -263,9 +295,10 @@ public class CryptoService {
 
         return new JSONObject(response.toString());
     }
-    
+
     /**
-     * Apply rate limiting to API calls
+     * Applies a fixed delay between API requests to comply with CoinGecko's free tier rate limits.
+     * Delays the current thread if the last API call was too recent.
      */
     private void applyRateLimit() {
         long currentTime = System.currentTimeMillis();

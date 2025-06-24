@@ -21,15 +21,23 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
- * LiveDataLoader is responsible for fetching and converting historical cryptocurrency
- * price data into Weka Instances that can be used for training ML models.
+ * The {@code LiveDataLoader} class handles fetching historical cryptocurrency price data
+ * from the CoinGecko API and transforming it into a Weka {@link Instances} dataset.
  *
- * It retrieves price data from the CoinGecko API, computes features such as:
- * - Previous day's price
- * - Moving averages (3-day, 7-day)
- * - Volatility (3-day standard deviation)
+ * <p>Features generated include:</p>
+ * <ul>
+ *   <li>Previous day's price</li>
+ *   <li>3-day and 7-day moving averages (MA3, MA7)</li>
+ *   <li>3-day volatility (standard deviation)</li>
+ * </ul>
  *
- * and constructs labeled instances for supervised learning.
+ * <p>Includes in-memory and file-based caching to minimize API calls and improve performance.</p>
+ *
+ * <p>Example usage:</p>
+ * <pre>{@code
+ *     LiveDataLoader loader = new LiveDataLoader();
+ *     Instances data = loader.getHistoricalData("bitcoin", 30);
+ * }</pre>
  */
 public class LiveDataLoader {
     // Cache directory
@@ -120,9 +128,22 @@ public class LiveDataLoader {
         
         return data;
     }
-    
+
     /**
-     * Process JSON data into Weka Instances
+     * Parses raw JSON string of historical prices and computes ML features.
+     *
+     * <p>Generates a dataset with the following columns:
+     * <ul>
+     *   <li>Previous day's price</li>
+     *   <li>3-day moving average</li>
+     *   <li>7-day moving average</li>
+     *   <li>3-day volatility</li>
+     *   <li>Actual price (target)</li>
+     * </ul>
+     * </p>
+     *
+     * @param jsonData Raw JSON response from the CoinGecko API.
+     * @return {@link Instances} object ready for model training.
      */
     private Instances processJsonData(String jsonData) {
         JSONObject json = new JSONObject(jsonData);
@@ -179,9 +200,12 @@ public class LiveDataLoader {
 
         return data;
     }
-    
+
     /**
-     * Check if cache file is expired
+     * Determines if a cached file is older than the configured expiration threshold.
+     *
+     * @param cacheFile The cache file to check.
+     * @return {@code true} if the cache file is expired, {@code false} otherwise.
      */
     private boolean isCacheExpired(File cacheFile) {
         long lastModified = cacheFile.lastModified();
@@ -190,9 +214,13 @@ public class LiveDataLoader {
         
         return (currentTime - lastModified) > expirationTime;
     }
-    
+
     /**
-     * Read data from cache file
+     * Reads the contents of a cached file and returns it as a string.
+     *
+     * @param cacheFile The cache file to read.
+     * @return The file's contents as a single JSON string.
+     * @throws Exception if an I/O error occurs.
      */
     private String readFromCache(File cacheFile) throws Exception {
         StringBuilder content = new StringBuilder();
@@ -204,9 +232,13 @@ public class LiveDataLoader {
         }
         return content.toString();
     }
-    
+
     /**
-     * Write data to cache file
+     * Writes JSON data to a cache file.
+     *
+     * @param cacheFile The destination file.
+     * @param data The JSON string to write.
+     * @throws Exception if an I/O error occurs.
      */
     private void writeToCache(File cacheFile, String data) throws Exception {
         try (FileWriter writer = new FileWriter(cacheFile)) {

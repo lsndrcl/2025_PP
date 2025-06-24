@@ -218,15 +218,16 @@ public class Portfolio {
     }
 
     /**
-     * Apre una posizione short su una criptovaluta specificata.
+     * Opens a short position on a specified cryptocurrency.
      *
-     * Il metodo calcola il collaterale richiesto (importo * prezzo), lo preleva
-     * dall'account e registra la posizione tra le posizioni aperte del portafoglio.
+     * This method calculates the required collateral (amount * price),
+     * withdraws it from the account, and records the position among the
+     * open positions in the portfolio.
      *
-     * @param symbol Il simbolo della criptovaluta (es. "BTC")
-     * @param amount La quantità di criptovaluta da shortare
-     * @param price Il prezzo corrente della criptovaluta al momento dell'apertura
-     * @throws IllegalArgumentException Se amount o price sono <= 0
+     * @param symbol The symbol of the cryptocurrency (e.g., "BTC")
+     * @param amount The amount of cryptocurrency to short
+     * @param price  The current price of the cryptocurrency at the time of opening
+     * @throws IllegalArgumentException If amount or price are <= 0
      */
     public void openShortPosition(String symbol, double amount, double price) {
         if (amount <= 0) throw new IllegalArgumentException("Amount must be positive");
@@ -244,20 +245,20 @@ public class Portfolio {
 
 
     /**
-     * Chiude una posizione short per una determinata criptovaluta.
+     * Closes a short position for a specified cryptocurrency.
      *
-     * Il metodo chiude una o più posizioni short per la quantità richiesta,
-     * calcola il profitto o la perdita (PnL) per ciascuna e restituisce
-     * all'account il collaterale originale più l'eventuale profitto.
+     * This method closes one or more short positions for the requested amount,
+     * calculates the profit or loss (PnL) for each, and returns the original
+     * collateral plus any profit to the account.
      *
-     * Se la quantità da chiudere è maggiore delle posizioni esistenti,
-     * viene sollevata un'eccezione.
+     * If the amount to be closed exceeds the existing positions,
+     * an exception is thrown.
      *
-     * @param symbol Il simbolo della criptovaluta (es. "BTC")
-     * @param amount La quantità da chiudere
-     * @param currentPrice Il prezzo di mercato attuale della criptovaluta
-     * @return Il profitto o perdita totale (PnL) ottenuto dalla chiusura
-     * @throws IllegalStateException Se non ci sono sufficienti posizioni short aperte
+     * @param symbol       The symbol of the cryptocurrency (e.g., "BTC")
+     * @param amount       The amount to close
+     * @param currentPrice The current market price of the cryptocurrency
+     * @return The total profit or loss (PnL) obtained from closing the position
+     * @throws IllegalStateException If there are not enough open short positions
      */
     public double closeShortPosition(String symbol, double amount, double currentPrice) {
         List<Position> symbolPositions = positions.get(symbol);
@@ -299,11 +300,11 @@ public class Portfolio {
 
 
     /**
-     * Restituisce una mappa delle posizioni short attualmente aperte.
+     * Returns a map of currently open short positions.
      *
-     * La mappa contiene per ogni criptovaluta la quantità totale shortata.
+     * The map contains the total shorted amount for each cryptocurrency.
      *
-     * @return Una mappa da simbolo di criptovaluta a quantità shortata
+     * @return A map from cryptocurrency symbol to total shorted amount
      */
     public Map<String, Double> getShortPositions() {
         Map<String, Double> shorts = new HashMap<>();
@@ -321,16 +322,14 @@ public class Portfolio {
 
 
     /**
-     * Restituisce tutte le posizioni aperte (long e short) nel portafoglio.
+     * Returns all open positions (both long and short) in the portfolio.
      *
-     * La mappa risultante è immutabile e mostra ogni simbolo associato alla lista
-     * delle relative posizioni (long o short).
+     * The resulting map is unmodifiable and shows each symbol associated with
+     * the list of corresponding positions (either long or short).
      *
-     * @return Una mappa non modificabile da simbolo a lista di posizioni
+     * @return An unmodifiable map from symbol to list of positions
      */
     public Map<String, List<Position>> getAllPositions() {
         return Collections.unmodifiableMap(positions);
     }
-
 }
-
