@@ -1,4 +1,4 @@
-# Java Bank Crypto Project
+# Java Trading Simulator Project
 
 A Java application for cryptocurrency trading, portfolio management, and financial analysis.
 
